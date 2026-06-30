@@ -22,7 +22,7 @@ This project is about the reinforcement learning training code used by AgiBot X1
 6. Install the training code dependencies:
    - Clone this repository.
    - `pip install -e .`
-### Usage
+### Usage11111
 #### Train:
 ```python scripts/train.py --task=x1_dh_stand --run_name=<run_name> --headless```
 - The trained model will be saved in `/log/<experiment_name>/exported_data/<date_time><run_name>/model_<iteration>.pt`, where `<experiment_name>` is defined in the config file.
