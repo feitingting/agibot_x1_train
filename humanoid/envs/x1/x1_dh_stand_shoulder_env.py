@@ -658,8 +658,8 @@ class X1DHStandShoulderEnv(LeggedRobot):
         on penalizing deviation in yaw and roll directions. Excludes yaw and roll from the main penalty.
         """
         joint_diff = self.dof_pos - self.default_joint_pd_target
-        left_yaw_roll = joint_diff[:, [1,2,5,6]]
-        right_yaw_roll = joint_diff[:, [8,9,12,13]]
+        left_yaw_roll = joint_diff[:, [1, 2, 5]]
+        right_yaw_roll = joint_diff[:, [8, 9, 12]]
         yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
         yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
         return torch.exp(-yaw_roll * 100) - 0.01 * torch.norm(joint_diff, dim=1)

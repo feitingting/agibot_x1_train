@@ -77,8 +77,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         fix_base_link = False
 
     class terrain(LeggedRobotCfg.terrain):
-        # mesh_type = 'plane'
-        mesh_type = 'plane'
+        mesh_type = 'trimesh'
         curriculum = False
         # rough terrain only:
         measure_heights = False
@@ -111,8 +110,8 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         restitution = 0.
 
     class noise(LeggedRobotCfg.noise):
-        add_noise = False
-        noise_level = 0.5    # scales other values
+        add_noise = True
+        noise_level = 1.5    # scales other values
 
         class noise_scales(LeggedRobotCfg.noise.noise_scales):
             dof_pos = 0.02
@@ -192,40 +191,40 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
             contact_collection = 2
 
     class domain_rand(LeggedRobotCfg.domain_rand):
-        randomize_friction = False
+        randomize_friction = True
         friction_range = [0.2, 1.3]
         restitution_range = [0.0, 0.4]
 
         # push
-        push_robots = False
+        push_robots = True
         push_interval_s = 4 # every this second, push robot
         update_step = 2000 * 24 # after this count, increase push_duration index
         push_duration = [0, 0.05, 0.1, 0.15, 0.2, 0.25] # increase push duration during training
         max_push_vel_xy = 0.2
         max_push_ang_vel = 0.2
 
-        randomize_base_mass = False
+        randomize_base_mass = True
         added_mass_range = [-3, 3] # base mass rand range, base mass is all fix link sum mass
 
-        randomize_com = False
+        randomize_com = True
         com_displacement_range = [[-0.05, 0.05],
                                   [-0.05, 0.05],
                                   [-0.05, 0.05]]
 
-        randomize_gains = False
+        randomize_gains = True
         stiffness_multiplier_range = [0.8, 1.2]  # Factor
         damping_multiplier_range = [0.8, 1.2]    # Factor
 
-        randomize_torque = False
+        randomize_torque = True
         torque_multiplier_range = [0.8, 1.2]
 
-        randomize_link_mass = False
+        randomize_link_mass = True
         added_link_mass_range = [0.9, 1.1]
 
-        randomize_motor_offset = False
+        randomize_motor_offset = True
         motor_offset_range = [-0.035, 0.035] # Offset to add to the motor angles
         
-        randomize_joint_friction = False
+        randomize_joint_friction = True
         randomize_joint_friction_each_joint = False
         joint_friction_range = [0.01, 1.15]
         joint_1_friction_range = [0.01, 1.15]
@@ -239,7 +238,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         joint_9_friction_range = [0.5, 1.3]
         joint_10_friction_range = [0.5, 1.3]
 
-        randomize_joint_damping = False
+        randomize_joint_damping = True
         randomize_joint_damping_each_joint = False
         joint_damping_range = [0.3, 1.5]
         joint_1_damping_range = [0.3, 1.5]
@@ -253,7 +252,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         joint_9_damping_range = [0.9, 1.5]
         joint_10_damping_range = [0.9, 1.5]
 
-        randomize_joint_armature = False
+        randomize_joint_armature = True
         randomize_joint_armature_each_joint = False
         joint_armature_range = [0.0001, 0.05]     # Factor
         joint_1_armature_range = [0.0001, 0.05]
@@ -267,12 +266,12 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         joint_9_armature_range = [0.0001, 0.05]
         joint_10_armature_range = [0.0001, 0.05]
 
-        add_lag = False
+        add_lag = True
         randomize_lag_timesteps = True
         randomize_lag_timesteps_perstep = False
         lag_timesteps_range = [5, 40]
         
-        add_dof_lag = False
+        add_dof_lag = True
         randomize_dof_lag_timesteps = True
         randomize_dof_lag_timesteps_perstep = False
         dof_lag_timesteps_range = [0, 40]
@@ -290,17 +289,17 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         randomize_imu_lag_timesteps_perstep = False
         imu_lag_timesteps_range = [1, 10]
         
-        randomize_coulomb_friction = False
+        randomize_coulomb_friction = True
         joint_coulomb_range = [0.1, 0.9]
         joint_viscous_range = [0.05, 0.1]
         
     class commands(LeggedRobotCfg.commands):
-        curriculum = False
+        curriculum = True
         max_curriculum = 1.5
         # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         num_commands = 4
         resampling_time = 25.  # time before command are changed[s]
-        gait = ["stand", "walk_sagittal"] # gait type during training
+        gait = ["walk_omnidirectional", "stand", "walk_omnidirectional"]
         # proportion during whole life time
         gait_time_range = {"walk_sagittal": [2,6],
                            "walk_lateral": [2,6],
@@ -313,9 +312,9 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         sw_switch = True # use stand_com_threshold or not
 
         class ranges:
-            lin_vel_x = [0.0, 0.3] # min max [m/s] 
-            lin_vel_y = [0.0, 0.0]   # min max [m/s]
-            ang_vel_yaw = [0.0, 0.6]  # min max [rad/s]
+            lin_vel_x = [-0.4, 1.2] # min max [m/s] 
+            lin_vel_y = [-0.4, 0.4]   # min max [m/s]
+            ang_vel_yaw = [-0.6, 0.6]  # min max [rad/s]
             heading = [-3.14, 3.14]
 
     class rewards:
@@ -323,57 +322,57 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         soft_dof_vel_limit = 0.9
         soft_torque_limit = 0.9
         base_height_target = 0.61
-        foot_min_dist = 0.3
-        foot_max_dist = 0.8
+        foot_min_dist = 0.2
+        foot_max_dist = 1.0
 
         # final_swing_joint_pos = final_swing_joint_delta_pos + default_pos
         final_swing_joint_delta_pos = [
-           0.25, 0.02, -0.03, 0.40, -0.15, 0.0, 0.0,
-          -0.25,-0.02,  0.03, 0.40, -0.15, 0.0, 0.0
+           0.25, 0.05, -0.11, 0.35, -0.16, 0.0, 0.0,
+          -0.25,-0.05,  0.11, 0.35, -0.16, 0.0, 0.0
         ]
-        target_feet_height = 0.06
-        target_feet_height_max = 0.10
+        target_feet_height = 0.03
+        target_feet_height_max = 0.06
         feet_to_ankle_distance = 0.041
-        cycle_time = 1
+        cycle_time = 1.0
         # if true negative total rewards are clipped at zero (avoids early termination problems)
         only_positive_rewards = True
         # tracking reward = exp(-error*sigma)
         tracking_sigma = 5 
-        max_contact_force = 500  # forces above this value are penalized
+        max_contact_force = 700  # forces above this value are penalized
         
         class scales:
-            ref_joint_pos = 1.0
-            feet_clearance = 1.0
-            feet_contact_number = 1.5
+            ref_joint_pos = 2.2
+            feet_clearance = 1.
+            feet_contact_number = 2.0
             # gait
             feet_air_time = 1.2
-            foot_slip = -0.2
+            foot_slip = -0.1
             # 奖励权重，较大，横向姿态发散。较小，双脚太近，交叉步。
-            feet_distance = 0.3
-            knee_distance = 0.3
+            feet_distance = 0.2
+            knee_distance = 0.2
             # contact 
-            feet_contact_forces = -0.02
+            feet_contact_forces = -0.01
             # vel tracking
-            tracking_lin_vel = 1.0
-            tracking_ang_vel = 0.5
-            vel_mismatch_exp = 0.8 # lin_z; ang x,y
-            low_speed = 0.3
-            track_vel_hard = 0.35
+            tracking_lin_vel = 1.8
+            tracking_ang_vel = 1.1
+            vel_mismatch_exp = 0.5 # lin_z; ang x,y
+            low_speed = 0.2
+            track_vel_hard = 0.5
             # base pos
             default_joint_pos = 1.0
-            orientation = 3.0
-            feet_rotation = 0.5
-            base_height = 0.8
-            base_acc = 0.6
+            orientation = 1.
+            feet_rotation = 0.3
+            base_height = 0.2
+            base_acc = 0.2
             # energy
-            action_smoothness = -0.02
-            hip_yaw_action = -0.02
-            shoulder_action = -0.03
-            torques = -1e-6
-            dof_vel = -1e-5
-            dof_acc = -5e-7
+            action_smoothness = -0.002
+            hip_yaw_action = -0.002
+            shoulder_action = -0.003
+            torques = -8e-9
+            dof_vel = -2e-8
+            dof_acc = -1e-7
             collision = -1.
-            stand_still = 1.5
+            stand_still = 2.5
             # limits
             dof_vel_limits = -1
             dof_pos_limits = -10.
@@ -388,7 +387,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
             quat = 1.
             height_measurements = 5.0
         clip_observations = 100.
-        clip_actions = 3.0
+        clip_actions = 100.
 
 
 class X1DHStandShoulderCfgPPO(LeggedRobotCfgPPO):
@@ -424,7 +423,7 @@ class X1DHStandShoulderCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCriticDH'
         algorithm_class_name = 'DHPPO'
         num_steps_per_env = 24  # per iteration
-        max_iterations = 8000  # number of policy updates
+        max_iterations = 20000  # number of policy updates
         
         # logging
         save_interval = 100  # check for potential saves every this many iterations
