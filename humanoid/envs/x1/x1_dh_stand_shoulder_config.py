@@ -51,7 +51,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         num_actions = 14
         num_envs = 4096
         episode_length_s = 24 #episode length in seconds
-        use_ref_actions = True
+        use_ref_actions = False
         num_commands = 5 # sin_pos cos_pos vx vy vz
 
     class safety:
@@ -77,7 +77,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         fix_base_link = False
 
     class terrain(LeggedRobotCfg.terrain):
-        mesh_type = 'trimesh'
+        mesh_type = 'plane'
         curriculum = False
         # rough terrain only:
         measure_heights = False
@@ -299,7 +299,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         num_commands = 4
         resampling_time = 25.  # time before command are changed[s]
-        gait = ["walk_sagittal"]
+        gait = ["stand","walk_sagittal"]
         # proportion during whole life time
         gait_time_range = {"walk_sagittal": [2,6],
                            "walk_lateral": [2,6],
@@ -342,7 +342,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         
         class scales:
             ref_joint_pos = 2.2
-            feet_clearance = 2.5
+            feet_clearance = 1.5
             feet_contact_number = 2.0
             # gait
             feet_air_time = 2.0
@@ -423,7 +423,7 @@ class X1DHStandShoulderCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCriticDH'
         algorithm_class_name = 'DHPPO'
         num_steps_per_env = 24  # per iteration
-        max_iterations = 20000  # number of policy updates
+        max_iterations = 8000  # number of policy updates
         
         # logging
         save_interval = 100  # check for potential saves every this many iterations
