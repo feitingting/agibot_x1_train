@@ -610,20 +610,27 @@ class X1DHStandShoulderEnv(LeggedRobot):
 
     def _reward_feet_air_time(self):
         """
-        Calculates the reward for feet air time, promoting longer steps. This is achieved by
-        checking the first contact with the ground after being in the air. The air time is
-        limited to a maximum value for reward calculation.
+        Reward swing-foot flight: continuous signal when the swing foot is airborne,
+        plus a bonus on touchdown after measurable air time.
         """
         contact = self.contact_forces[:, self.feet_indices, 2] > 5.
-        stance_mask = self._get_stance_mask().clone()
-        stance_mask[torch.norm(self.commands[:, :3], dim=1) < 0.05] = 1
-        self.contact_filt = torch.logical_or(torch.logical_or(contact, stance_mask), self.last_contacts)
+        swing_mask = 1 - self._get_stance_mask()
+        walking = torch.norm(self.commands[:, :3], dim=1) > self.cfg.commands.stand_com_threshold
+        walk_mask = walking.unsqueeze(1)
+
+        # per-step reward: swing phase + no contact + walking command
+        in_air = (~contact) & (swing_mask > 0) & walk_mask
+        continuous_rew = in_air.float().sum(dim=1)
+
+        # touchdown bonus after real flight (keeps original buffer semantics)
+        self.contact_filt = torch.logical_or(contact, self.last_contacts)
         self.last_contacts = contact
-        first_contact = (self.feet_air_time > 0.) * self.contact_filt
         self.feet_air_time += self.dt
-        air_time = self.feet_air_time.clamp(0, 0.5) * first_contact
-        self.feet_air_time *= ~self.contact_filt
-        return air_time.sum(dim=1)
+        first_contact = (self.feet_air_time > 0.) * self.contact_filt
+        touchdown_rew = (self.feet_air_time.clamp(0, 0.5) * first_contact).sum(dim=1)
+        self.feet_air_time *= ~contact
+
+        return continuous_rew + touchdown_rew
 
     def _reward_feet_contact_number(self):
         """
@@ -751,33 +758,32 @@ class X1DHStandShoulderEnv(LeggedRobot):
     
     def _reward_feet_clearance(self):
         """
-        Calculates reward based on the clearance of the swing leg from the ground during movement.
-        Encourages appropriate lift of the feet during the swing phase of the gait.
+        Reward absolute swing-foot height above ground during walking.
+        Uses foot link height directly instead of integrating delta-z, which stays ~0
+        when the foot slides on the ground without lifting.
         """
-        # Compute feet contact mask
         contact = self.contact_forces[:, self.feet_indices, 2] > 5.
-
-        # Get the z-position of the feet and compute the change in z-position
         feet_z = self.rigid_state[:, self.feet_indices, 2] - self.cfg.rewards.feet_to_ankle_distance
-        delta_z = feet_z - self.last_feet_z
-        self.feet_height += delta_z
-        self.last_feet_z = feet_z
-
-        # Compute swing mask
         swing_mask = 1 - self._get_stance_mask()
+        walking = torch.norm(self.commands[:, :3], dim=1) > self.cfg.commands.stand_com_threshold
+        walk_mask = walking.unsqueeze(1)
+        swing_mask = swing_mask * walk_mask
 
         target_height = self.cfg.rewards.target_feet_height
-        max_height = self.cfg.rewards.target_feet_height_max
-        height_sigma = max((max_height - target_height) / 2.0, 1e-4)
+        height_sigma = max(
+            (self.cfg.rewards.target_feet_height_max - target_height) / 2.0, 1e-4)
 
-        height_error = self.feet_height - target_height
+        height_error = feet_z - target_height
         clearance_reward = torch.exp(-torch.square(height_error) / (2 * height_sigma ** 2))
         low_clearance_penalty = torch.square(
-            torch.clamp(target_height - self.feet_height, min=0.0) / target_height
+            torch.clamp(target_height - feet_z, min=0.0) / target_height
         )
-        rew_pos = torch.sum((clearance_reward - low_clearance_penalty) * swing_mask, dim=1)
-        self.feet_height *= ~contact
-        return rew_pos
+        # extra penalty when swing foot still has ground contact
+        swing_contact_penalty = (contact.float() * swing_mask).sum(dim=1)
+
+        rew_pos = torch.sum(
+            (clearance_reward - low_clearance_penalty) * swing_mask, dim=1)
+        return rew_pos - 0.5 * swing_contact_penalty
 
     def _reward_low_speed(self):
         """

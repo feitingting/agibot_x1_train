@@ -341,11 +341,11 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         max_contact_force = 700  # forces above this value are penalized
         
         class scales:
-            ref_joint_pos = 2.2
-            feet_clearance = 1.5
+            ref_joint_pos = 1.5
+            feet_clearance = 3.0
             feet_contact_number = 2.0
             # gait
-            feet_air_time = 2.0
+            feet_air_time = 3.0
             foot_slip = -0.1
             # 奖励权重，较大，横向姿态发散。较小，双脚太近，交叉步。
             feet_distance = 0.2
@@ -359,7 +359,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
             low_speed = 0.2
             track_vel_hard = 0.5
             # base pos
-            default_joint_pos = 1.0
+            default_joint_pos = 0.5
             orientation = 1.
             feet_rotation = 0.3
             base_height = 0.2
@@ -372,7 +372,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
             dof_vel = -2e-8
             dof_acc = -1e-7
             collision = -1.
-            stand_still = 2.5
+            stand_still = 1.0
             # limits
             dof_vel_limits = -1
             dof_pos_limits = -10.
