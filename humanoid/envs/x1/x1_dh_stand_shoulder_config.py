@@ -51,7 +51,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         num_actions = 14
         num_envs = 4096
         episode_length_s = 24 #episode length in seconds
-        use_ref_actions = False
+        use_ref_actions = True
         num_commands = 5 # sin_pos cos_pos vx vy vz
 
     class safety:
@@ -167,7 +167,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         }
 
         # action scale: target angle = actionScale * action + defaultAngle
-        action_scale: float = 0.15
+        action_scale: float = 0.5
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation: int = 10  # 50hz 100hz
 
@@ -299,7 +299,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         num_commands = 4
         resampling_time = 25.  # time before command are changed[s]
-        gait = ["walk_omnidirectional", "stand", "walk_omnidirectional"]
+        gait = ["walk_sagittal"]
         # proportion during whole life time
         gait_time_range = {"walk_sagittal": [2,6],
                            "walk_lateral": [2,6],
@@ -335,17 +335,17 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         feet_to_ankle_distance = 0.041
         cycle_time = 1.0
         # if true negative total rewards are clipped at zero (avoids early termination problems)
-        only_positive_rewards = True
+        only_positive_rewards = False
         # tracking reward = exp(-error*sigma)
         tracking_sigma = 5 
         max_contact_force = 700  # forces above this value are penalized
         
         class scales:
             ref_joint_pos = 2.2
-            feet_clearance = 1.
+            feet_clearance = 2.5
             feet_contact_number = 2.0
             # gait
-            feet_air_time = 1.2
+            feet_air_time = 2.0
             foot_slip = -0.1
             # 奖励权重，较大，横向姿态发散。较小，双脚太近，交叉步。
             feet_distance = 0.2
@@ -353,7 +353,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
             # contact 
             feet_contact_forces = -0.01
             # vel tracking
-            tracking_lin_vel = 1.8
+            tracking_lin_vel = 1.0
             tracking_ang_vel = 1.1
             vel_mismatch_exp = 0.5 # lin_z; ang x,y
             low_speed = 0.2
