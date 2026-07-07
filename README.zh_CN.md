@@ -103,5 +103,13 @@
 > * [GitHub - leggedrobotics/rsl_rl: Fast and simple implementation of RL algorithms, designed to run fully on GPU.](https://github.com/leggedrobotics/rsl_rl)
 > * [GitHub - roboterax/humanoid-gym: Humanoid-Gym: Reinforcement Learning for Humanoid Robot with Zero-Shot Sim2Real Transfer https://arxiv.org/abs/2404.05695](https://github.com/roboterax/humanoid-gym)
 
+##激活环境
+export LD_LIBRARY_PATH=/home/ruiujia/miniconda3/envs/myenv/lib:$LD_LIBRARY_PATH
 
+##查看某一次训练的看板
+cd /home/ruiujia/X1/ZY
+tensorboard --logdir agibot_x1_train/logs/x1_dh_stand_shoulder/exported_data/<date_time><run_name>
 
+##发送全0速度
+ros2 topic pub --once /cmd_vel_limiter geometry_msgs/msg/Twist \
+  "{linear: {x: 0.0, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"

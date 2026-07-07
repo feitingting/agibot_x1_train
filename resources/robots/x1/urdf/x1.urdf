@@ -263,7 +263,7 @@
   </link>
   <joint
     name="left_shoulder_pitch_joint"
-    type="fixed">
+    type="revolute">
     <origin
       xyz="0 0.255999999999995 -0.145800000000004"
       rpy="0 0 -3.14159265358978" />
@@ -274,10 +274,10 @@
     <axis
       xyz="0 0 -1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
-      effort="0"
-      velocity="0" />
+      lower="-1.2"
+      upper="1.2"
+      effort="40"
+      velocity="6" />
   </joint>
   <link
     name="left_shoulder_roll">
@@ -614,7 +614,7 @@
   </link>
   <joint
     name="right_shoulder_pitch_joint"
-    type="fixed">
+    type="revolute">
     <origin
       xyz="0 0.256 0.1458"
       rpy="3.1416 0 0" />
@@ -625,10 +625,10 @@
     <axis
       xyz="0 0 1" />
     <limit
-      lower="-3.14"
-      upper="3.14"
-      effort="0"
-      velocity="0" />
+      lower="-1.2"
+      upper="1.2"
+      effort="40"
+      velocity="6" />
   </joint>
   <link
     name="right_shoulder_roll">

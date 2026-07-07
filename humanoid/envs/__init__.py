@@ -36,8 +36,14 @@ from .base.legged_robot import LeggedRobot
 
 from .x1.x1_dh_stand_config  import X1DHStandCfg, X1DHStandCfgPPO
 
+from .x1.x1_dh_stand_shoulder_config import X1DHStandShoulderCfg, X1DHStandShoulderCfgPPO
+
 from .x1.x1_dh_stand_env import X1DHStandEnv
+
+from .x1.x1_dh_stand_shoulder_env import X1DHStandShoulderEnv
 
 from humanoid.utils.task_registry import task_registry
 
 task_registry.register( "x1_dh_stand", X1DHStandEnv, X1DHStandCfg(), X1DHStandCfgPPO() )
+task_registry.register( "x1_dh_stand_shoulder", X1DHStandShoulderEnv, X1DHStandShoulderCfg(), X1DHStandShoulderCfgPPO() )
+

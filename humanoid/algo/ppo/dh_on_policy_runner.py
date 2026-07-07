@@ -74,6 +74,9 @@ class DHOnPolicyRunner:
         self.alg: DHPPO = alg_class(actor_critic, device=self.device, **self.alg_cfg)
         self.num_steps_per_env = self.cfg["num_steps_per_env"]
         self.save_interval = self.cfg["save_interval"]
+        self.early_stop_on_reward_drop = bool(self.cfg.get("early_stop_on_reward_drop", True))
+        self.early_stop_reward_threshold = float(self.cfg.get("early_stop_reward_threshold", 20.0))
+        self.early_stop_trend_window = max(1, int(self.cfg.get("early_stop_trend_window", 10)))
 
         # init storage and model
         self.alg.init_storage(
@@ -111,6 +114,8 @@ class DHOnPolicyRunner:
         ep_infos = []
         rewbuffer = deque(maxlen=100)
         lenbuffer = deque(maxlen=100)
+        reward_trend_buffer = deque(maxlen=2 * self.early_stop_trend_window)
+        early_stop_triggered = False
         cur_reward_sum = torch.zeros(
             self.env.num_envs, dtype=torch.float, device=self.device
         )
@@ -119,9 +124,12 @@ class DHOnPolicyRunner:
         )
 
         tot_iter = self.current_learning_iteration + num_learning_iterations
+        start_learning_iteration = self.current_learning_iteration
+        last_it = self.current_learning_iteration - 1
 
         for it in range(self.current_learning_iteration, tot_iter):
             self.it = it
+            last_it = it
             start = time.time()
 
             obs_std, obs_mean = torch.std_mean(obs, dim=0)
@@ -167,9 +175,66 @@ class DHOnPolicyRunner:
             learn_time = stop - start
             if self.log_dir is not None:
                 self.log(locals())
+
+            if len(rewbuffer) > 0:
+                mean_reward = statistics.mean(rewbuffer)
+                reward_trend_buffer.append(mean_reward)
+                halfway_it = start_learning_iteration + num_learning_iterations // 2
+                if (
+                    self.early_stop_on_reward_drop
+                    and it >= halfway_it
+                    and mean_reward < self.early_stop_reward_threshold
+                    and len(reward_trend_buffer) == reward_trend_buffer.maxlen
+                ):
+                    reward_history = list(reward_trend_buffer)
+                    older_rewards = reward_history[:self.early_stop_trend_window]
+                    recent_rewards = reward_history[self.early_stop_trend_window:]
+                    older_mean = statistics.mean(older_rewards)
+                    recent_mean = statistics.mean(recent_rewards)
+                    recent_start = recent_rewards[0]
+                    recent_drop_steps = sum(
+                        curr < prev for prev, curr in zip(recent_rewards[:-1], recent_rewards[1:])
+                    )
+                    min_drop_steps = max(1, self.early_stop_trend_window // 2)
+                    recent_is_falling = (
+                        mean_reward < recent_start and recent_drop_steps >= min_drop_steps
+                    )
+
+                    if recent_mean < older_mean and recent_is_falling:
+                        early_stop_triggered = True
+                        early_stop_reason = (
+                            "mean_reward dropped after halfway: "
+                            f"it={it}, current={mean_reward:.2f}, "
+                            f"threshold={self.early_stop_reward_threshold:.2f}, "
+                            f"older_mean={older_mean:.2f}, recent_mean={recent_mean:.2f}"
+                        )
+                        early_stop_infos = {
+                            "early_stop": True,
+                            "reason": early_stop_reason,
+                            "mean_reward": mean_reward,
+                            "older_mean": older_mean,
+                            "recent_mean": recent_mean,
+                            "reward_threshold": self.early_stop_reward_threshold,
+                            "trend_window": self.early_stop_trend_window,
+                        }
+                        early_stop_path = os.path.join(
+                            self.log_dir, "model_early_stop_{}.pt".format(it)
+                        )
+                        self.save(early_stop_path, infos=early_stop_infos)
+                        if self.writer is not None:
+                            self.writer.add_scalar("Train/early_stop", 1, it)
+                            self.writer.add_text("Train/early_stop_reason", early_stop_reason, it)
+                            self.writer.flush()
+                        print(f"\n[EarlyStop] {early_stop_reason}\nSaved: {early_stop_path}\n")
+                        break
+
             if it % self.save_interval == 0:
                 self.save(os.path.join(self.log_dir, "model_{}.pt".format(it)))
             ep_infos.clear()
+
+        if early_stop_triggered:
+            self.current_learning_iteration = last_it + 1
+            return
 
         self.current_learning_iteration += num_learning_iterations
         self.save(
@@ -241,7 +306,7 @@ class DHOnPolicyRunner:
             )
 
 
-        for i in range(47):
+        for i in range(self.env.num_single_obs):
             self.writer.add_scalar('Observation/obs_mean_'+str(i), locs['obs_mean'][i], locs['it'])
             self.writer.add_scalar('Observation/obs_std_'+str(i), locs['obs_std'][i], locs['it'])
 

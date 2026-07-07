@@ -76,7 +76,7 @@ def get_euler_xyz_tensor(quat):
     euler_xyz[euler_xyz > np.pi] -= 2 * np.pi
     return euler_xyz
 
-class X1DHStandEnv(LeggedRobot):
+class X1DHStandShoulderEnv(LeggedRobot):
     '''
     X1DHStandEnv is a class that represents a custom environment for a legged robot.
 
@@ -280,20 +280,13 @@ class X1DHStandEnv(LeggedRobot):
         self.ref_dof_pos = torch.zeros_like(self.dof_pos)
         # left swing
         sin_pos_l[sin_pos_l > 0] = 0
-        self.ref_dof_pos[:, 0] = -sin_pos_l * self.cfg.rewards.final_swing_joint_delta_pos[0]
-        self.ref_dof_pos[:, 1] = -sin_pos_l * self.cfg.rewards.final_swing_joint_delta_pos[1]
-        self.ref_dof_pos[:, 2] = -sin_pos_l * self.cfg.rewards.final_swing_joint_delta_pos[2]
-        self.ref_dof_pos[:, 3] = -sin_pos_l * self.cfg.rewards.final_swing_joint_delta_pos[3]
-        self.ref_dof_pos[:, 4] = -sin_pos_l * self.cfg.rewards.final_swing_joint_delta_pos[4]
-        self.ref_dof_pos[:, 5] = -sin_pos_l * self.cfg.rewards.final_swing_joint_delta_pos[5]
+        side_dofs = self.num_actions // 2
+        for i in range(side_dofs):
+            self.ref_dof_pos[:, i] = -sin_pos_l * self.cfg.rewards.final_swing_joint_delta_pos[i]
         # right
         sin_pos_r[sin_pos_r < 0] = 0
-        self.ref_dof_pos[:, 6] = sin_pos_r *  self.cfg.rewards.final_swing_joint_delta_pos[6]
-        self.ref_dof_pos[:, 7] = sin_pos_r *  self.cfg.rewards.final_swing_joint_delta_pos[7]
-        self.ref_dof_pos[:, 8] = sin_pos_r *  self.cfg.rewards.final_swing_joint_delta_pos[8]
-        self.ref_dof_pos[:, 9] = sin_pos_r *  self.cfg.rewards.final_swing_joint_delta_pos[9]
-        self.ref_dof_pos[:, 10] = sin_pos_r * self.cfg.rewards.final_swing_joint_delta_pos[10]
-        self.ref_dof_pos[:, 11] = sin_pos_r * self.cfg.rewards.final_swing_joint_delta_pos[11]
+        for i in range(side_dofs, self.num_actions):
+            self.ref_dof_pos[:, i] = sin_pos_r * self.cfg.rewards.final_swing_joint_delta_pos[i]
 
         self.ref_dof_pos[torch.abs(sin_pos) < 0.1] = 0.
         
@@ -576,7 +569,7 @@ class X1DHStandEnv(LeggedRobot):
         pos_target[stand_command] = self.default_dof_pos.clone()
         diff = joint_pos - pos_target
         r = torch.exp(-2 * torch.norm(diff, dim=1)) - 0.2 * torch.norm(diff, dim=1).clamp(0, 0.5)
-        r[stand_command] = 1.0
+        #[stand_command] = 1.0
         return r
     
     def _reward_feet_distance(self):
@@ -665,8 +658,8 @@ class X1DHStandEnv(LeggedRobot):
         on penalizing deviation in yaw and roll directions. Excludes yaw and roll from the main penalty.
         """
         joint_diff = self.dof_pos - self.default_joint_pd_target
-        left_yaw_roll = joint_diff[:, [1,2,5]]
-        right_yaw_roll = joint_diff[:, [7,8,11]]
+        left_yaw_roll = joint_diff[:, [1,2,5,6]]
+        right_yaw_roll = joint_diff[:, [8,9,12,13]]
         yaw_roll = torch.norm(left_yaw_roll, dim=1) + torch.norm(right_yaw_roll, dim=1)
         yaw_roll = torch.clamp(yaw_roll - 0.1, 0, 50)
         return torch.exp(-yaw_roll * 100) - 0.01 * torch.norm(joint_diff, dim=1)
@@ -831,7 +824,7 @@ class X1DHStandEnv(LeggedRobot):
         Penalizes the use of high torques in the robot's joints. Encourages efficient movement by minimizing
         the necessary force exerted by the motors.
         """
-        ankle_idx = [4,5,10,11]
+        ankle_idx = [4,5,11,12]
         return torch.sum(torch.square(self.torques[:,ankle_idx]), dim=1)
     
     def _reward_feet_rotation(self):
@@ -873,6 +866,12 @@ class X1DHStandEnv(LeggedRobot):
             self.actions + self.last_last_actions - 2 * self.last_actions), dim=1)
         term_3 = 0.05 * torch.sum(torch.abs(self.actions), dim=1)
         return term_1 + term_2 + term_3
+
+    def _reward_hip_yaw_action(self):
+        return torch.sum(torch.square(self.actions[:, [2, 9]]), dim=1)
+
+    def _reward_shoulder_action(self):
+        return torch.sum(torch.square(self.actions[:, [6, 13]]), dim=1)
     
     def _reward_termination(self):
         # Terminal reward / penalty
