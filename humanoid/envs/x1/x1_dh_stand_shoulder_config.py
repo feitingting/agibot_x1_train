@@ -296,11 +296,17 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
     class commands(LeggedRobotCfg.commands):
         curriculum = True
         max_curriculum = 1.5
+        max_curriculum_yaw = 0.8
         # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         num_commands = 4
         resampling_time = 25.  # time before command are changed[s]
-        gait = ["walk_omnidirectional"] # gait type during training
-        # proportion during whole life time
+
+        # --- staged locomotion curriculum (resume from checkpoint each stage) ---
+        # Stage 1 sagittal:  gait=["walk_sagittal"]; ranges: vx=[-0.4,1.2], vy=[0,0], yaw=[0,0]
+        # Stage 2 lateral:   gait=["walk_lateral"];   ranges: vx=[0,0], vy=[-0.4,0.4], yaw=[0,0]
+        # Stage 3 rotate:    gait=["rotate"];         ranges: vx=[0,0], vy=[0,0], yaw=[-0.6,0.6]
+        # Stage 4 omnidir:   gait=["walk_omnidirectional"]; ranges: all axes active
+        gait = ["walk_lateral"]
         gait_time_range = {"walk_sagittal": [2,6],
                            "walk_lateral": [2,6],
                            "rotate": [2,3],
@@ -312,9 +318,9 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         sw_switch = True # use stand_com_threshold or not
 
         class ranges:
-            lin_vel_x = [-0.4, 1.2] # min max [m/s] 
+            lin_vel_x = [0.0, 0.0] # min max [m/s]
             lin_vel_y = [-0.4, 0.4]   # min max [m/s]
-            ang_vel_yaw = [-0.6, 0.6]  # min max [rad/s]
+            ang_vel_yaw = [0.0, 0.0]  # min max [rad/s]
             heading = [-3.14, 3.14]
 
     class rewards:
@@ -326,9 +332,10 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         foot_max_dist = 1.0
 
         # final_swing_joint_pos = final_swing_joint_delta_pos + default_pos
+        # Sagittal: hip_pitch=0.25, hip_roll=0.05 | Lateral stage: hip_roll=0.12 | Rotate: hip_yaw=0.15
         final_swing_joint_delta_pos = [
-           0.25, 0.05, -0.11, 0.35, -0.16, 0.0, 0.0,
-          -0.25,-0.05,  0.11, 0.35, -0.16, 0.0, 0.0
+           0.15, 0.12, -0.15, 0.35, -0.16, 0.0, 0.0,
+          -0.15,-0.12,  0.15, 0.35, -0.16, 0.0, 0.0
         ]
         target_feet_height = 0.03
         target_feet_height_max = 0.06
@@ -353,20 +360,20 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
             # contact 
             feet_contact_forces = -0.01
             # vel tracking
-            tracking_lin_vel = 1.0
+            tracking_lin_vel = 1.5
             tracking_ang_vel = 1.1
             vel_mismatch_exp = 0.5 # lin_z; ang x,y
-            low_speed = 0.2
+            low_speed = 0.3
             track_vel_hard = 0.5
             # base pos
-            default_joint_pos = 0.5
+            default_joint_pos = 0.3
             orientation = 1.
             feet_rotation = 0.3
             base_height = 0.2
             base_acc = 0.2
             # energy
             action_smoothness = -0.002
-            hip_yaw_action = -0.002
+            hip_yaw_action = -0.0005
             shoulder_action = -0.003
             torques = -8e-9
             dof_vel = -2e-8

@@ -525,6 +525,8 @@ class X1DHStandShoulderEnv(LeggedRobot):
             self.extras["episode"]["terrain_level"] = torch.mean(self.terrain_levels.float())
         if self.cfg.commands.curriculum:
             self.extras["episode"]["max_command_x"] = self.command_ranges["lin_vel_x"][1]
+            self.extras["episode"]["max_command_y"] = self.command_ranges["lin_vel_y"][1]
+            self.extras["episode"]["max_command_yaw"] = self.command_ranges["ang_vel_yaw"][1]
         # send timeout info to the algorithm
         if self.cfg.env.send_timeouts:
             self.extras["time_outs"] = self.time_out_buf
@@ -547,6 +549,34 @@ class X1DHStandShoulderEnv(LeggedRobot):
             self.obs_history[i][env_ids] *= 0
         for i in range(self.critic_history.maxlen):
             self.critic_history[i][env_ids] *= 0
+
+    def update_command_curriculum(self, env_ids):
+        """Expand vx/vy/yaw command ranges when tracking performance is good."""
+        if not self.init_done:
+            return
+
+        lin_perf = torch.mean(self.episode_sums["tracking_lin_vel"][env_ids]) / self.max_episode_length
+        ang_perf = torch.mean(self.episode_sums["tracking_ang_vel"][env_ids]) / self.max_episode_length
+        lin_thresh = 0.8 * self.reward_scales["tracking_lin_vel"]
+        ang_thresh = 0.8 * self.reward_scales["tracking_ang_vel"]
+        max_lin = self.cfg.commands.max_curriculum
+        max_yaw = getattr(self.cfg.commands, "max_curriculum_yaw", 0.8)
+
+        if lin_perf > lin_thresh:
+            self.command_ranges["lin_vel_x"][0] = np.clip(
+                self.command_ranges["lin_vel_x"][0] - 0.25, -max_lin / 2, 0.)
+            self.command_ranges["lin_vel_x"][1] = np.clip(
+                self.command_ranges["lin_vel_x"][1] + 0.5, 0., max_lin)
+            self.command_ranges["lin_vel_y"][0] = np.clip(
+                self.command_ranges["lin_vel_y"][0] - 0.15, -max_lin / 2, 0.)
+            self.command_ranges["lin_vel_y"][1] = np.clip(
+                self.command_ranges["lin_vel_y"][1] + 0.15, 0., max_lin / 2)
+
+        if ang_perf > ang_thresh:
+            self.command_ranges["ang_vel_yaw"][0] = np.clip(
+                self.command_ranges["ang_vel_yaw"][0] - 0.1, -max_yaw, 0.)
+            self.command_ranges["ang_vel_yaw"][1] = np.clip(
+                self.command_ranges["ang_vel_yaw"][1] + 0.1, 0., max_yaw)
         
     
     def _init_buffers(self):
@@ -785,38 +815,36 @@ class X1DHStandShoulderEnv(LeggedRobot):
             (clearance_reward - low_clearance_penalty) * swing_mask, dim=1)
         return rew_pos - 0.5 * swing_contact_penalty
 
+    def _low_speed_axis_reward(self, actual, command, threshold=0.05):
+        active = command.abs() > threshold
+        speed_too_low = actual.abs() < 0.5 * command.abs()
+        speed_too_high = actual.abs() > 1.2 * command.abs()
+        speed_desired = ~(speed_too_low | speed_too_high)
+        sign_mismatch = (torch.sign(actual) != torch.sign(command)) & active
+
+        reward = torch.zeros_like(actual)
+        reward[speed_too_low & active] = -1.0
+        reward[speed_too_high & active] = 0.0
+        reward[speed_desired & active] = 1.2
+        reward[sign_mismatch] = -2.0
+        return reward
+
     def _reward_low_speed(self):
         """
-        Rewards or penalizes the robot based on its speed relative to the commanded speed. 
-        This function checks if the robot is moving too slow, too fast, or at the desired speed, 
-        and if the movement direction matches the command.
+        Penalize moving too slow / wrong direction for each active command axis:
+        vx, vy, and yaw rate.
         """
-        # Calculate the absolute value of speed and command for comparison
-        absolute_speed = torch.abs(self.base_lin_vel[:, 0])
-        absolute_command = torch.abs(self.commands[:, 0])
+        threshold = self.cfg.commands.stand_com_threshold
+        rx = self._low_speed_axis_reward(self.base_lin_vel[:, 0], self.commands[:, 0], threshold)
+        ry = self._low_speed_axis_reward(self.base_lin_vel[:, 1], self.commands[:, 1], threshold)
+        rz = self._low_speed_axis_reward(self.base_ang_vel[:, 2], self.commands[:, 2], threshold)
 
-        # Define speed criteria for desired range
-        speed_too_low = absolute_speed < 0.5 * absolute_command
-        speed_too_high = absolute_speed > 1.2 * absolute_command
-        speed_desired = ~(speed_too_low | speed_too_high)
-
-        # Check if the speed and command directions are mismatched
-        sign_mismatch = torch.sign(
-            self.base_lin_vel[:, 0]) != torch.sign(self.commands[:, 0])
-
-        # Initialize reward tensor
-        reward = torch.zeros_like(self.base_lin_vel[:, 0])
-
-        # Assign rewards based on conditions
-        # Speed too low
-        reward[speed_too_low] = -1.0
-        # Speed too high
-        reward[speed_too_high] = 0.
-        # Speed within desired range
-        reward[speed_desired] = 1.2
-        # Sign mismatch has the highest priority
-        reward[sign_mismatch] = -2.0
-        return reward * (self.commands[:, 0].abs() > 0.05)
+        active_count = (
+            (self.commands[:, 0].abs() > threshold).float()
+            + (self.commands[:, 1].abs() > threshold).float()
+            + (self.commands[:, 2].abs() > threshold).float()
+        ).clamp(min=1.0)
+        return (rx + ry + rz) / active_count
     
     def _reward_torques(self):
         """
