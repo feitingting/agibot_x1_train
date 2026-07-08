@@ -299,12 +299,12 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         num_commands = 4
         resampling_time = 25.  # time before command are changed[s]
-        gait = ["stand","walk_sagittal"]
+        gait = ["walk_omnidirectional"] # gait type during training
         # proportion during whole life time
         gait_time_range = {"walk_sagittal": [2,6],
                            "walk_lateral": [2,6],
                            "rotate": [2,3],
-                           "stand": [2,3],
+                           "stand": [2,4],
                            "walk_omnidirectional": [4,6]}
 
         heading_command = False  # if true: compute ang vel command from heading error
@@ -423,7 +423,7 @@ class X1DHStandShoulderCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCriticDH'
         algorithm_class_name = 'DHPPO'
         num_steps_per_env = 24  # per iteration
-        max_iterations = 8000  # number of policy updates
+        max_iterations = 15000  # number of policy updates
         
         # logging
         save_interval = 100  # check for potential saves every this many iterations
