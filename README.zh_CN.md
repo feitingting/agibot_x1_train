@@ -39,7 +39,7 @@
 - jit模型会存在 ``` log/exported_policies/<date_time>```
 
 #### 生成onnx模型:
-``` python scripts/export_onnx_dh.py --task=x1_dh_stand --load_run=<date_time>  ```
+``` python scripts/export_onnx_dh.py --task=x1_dh_stand --load_run=2026-07-09_09-09-49 ```
 - onnx模型会存在 ```log/exported_policies/<date_time>```
 
 #### 参数说明：

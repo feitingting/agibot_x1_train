@@ -124,7 +124,7 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
 
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.61]
+        pos = [0.0, 0.0, 0.7]
 
         default_joint_angles = {  # = target angles [rad] when action = 0.0
             'left_hip_pitch_joint': 0.4,
@@ -148,22 +148,22 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         control_type: Literal['P', 'V', 'T'] = 'P'
 
         stiffness: Dict[str, float] = {
-            'hip_pitch_joint': 60.0,
-            'hip_roll_joint': 60.0,
-            'hip_yaw_joint': 40.0,
-            'knee_pitch_joint': 80.0,
-            'ankle_pitch_joint': 40.0,
-            'ankle_roll_joint': 30.0,
+            'hip_pitch_joint': 30.0,
+            'hip_roll_joint': 40.0,
+            'hip_yaw_joint': 35.0,
+            'knee_pitch_joint': 100.0,
+            'ankle_pitch_joint': 35.0,
+            'ankle_roll_joint': 35.0,
             'shoulder_pitch_joint': 20.0,
         }
         damping: Dict[str, float] = {
-            'hip_pitch_joint': 6.0,
+            'hip_pitch_joint': 3.0,
             'hip_roll_joint': 3.0,
-            'hip_yaw_joint': 3.0,
-            'knee_pitch_joint': 4.0,
-            'ankle_pitch_joint': 2.0,
-            'ankle_roll_joint': 2.0,
-            'shoulder_pitch_joint': 3.0,
+            'hip_yaw_joint': 4.0,
+            'knee_pitch_joint': 10.0,
+            'ankle_pitch_joint': 0.5,
+            'ankle_roll_joint': 0.5,
+            'shoulder_pitch_joint': 2.0,
         }
 
         # action scale: target angle = actionScale * action + defaultAngle
@@ -296,7 +296,6 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
     class commands(LeggedRobotCfg.commands):
         curriculum = True
         max_curriculum = 1.5
-        max_curriculum_yaw = 0.8
         # Vers: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
         num_commands = 4
         resampling_time = 25.  # time before command are changed[s]
@@ -306,11 +305,11 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         # Stage 2 lateral:   gait=["walk_lateral"];   ranges: vx=[0,0], vy=[-0.4,0.4], yaw=[0,0]
         # Stage 3 rotate:    gait=["rotate"];         ranges: vx=[0,0], vy=[0,0], yaw=[-0.6,0.6]
         # Stage 4 omnidir:   gait=["walk_omnidirectional"]; ranges: all axes active
-        gait = ["walk_lateral"]
+        gait = ["walk_omnidirectional","stand","walk_omnidirectional"]
         gait_time_range = {"walk_sagittal": [2,6],
                            "walk_lateral": [2,6],
                            "rotate": [2,3],
-                           "stand": [2,4],
+                           "stand": [2,3],
                            "walk_omnidirectional": [4,6]}
 
         heading_command = False  # if true: compute ang vel command from heading error
@@ -318,9 +317,9 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         sw_switch = True # use stand_com_threshold or not
 
         class ranges:
-            lin_vel_x = [0.0, 0.0] # min max [m/s]
+            lin_vel_x = [-0.4, 1.2] # min max [m/s]
             lin_vel_y = [-0.4, 0.4]   # min max [m/s]
-            ang_vel_yaw = [0.0, 0.0]  # min max [rad/s]
+            ang_vel_yaw = [-0.6, 0.6]  # min max [rad/s]
             heading = [-3.14, 3.14]
 
     class rewards:
@@ -334,25 +333,25 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
         # final_swing_joint_pos = final_swing_joint_delta_pos + default_pos
         # Sagittal: hip_pitch=0.25, hip_roll=0.05 | Lateral stage: hip_roll=0.12 | Rotate: hip_yaw=0.15
         final_swing_joint_delta_pos = [
-           0.15, 0.12, -0.15, 0.35, -0.16, 0.0, 0.0,
-          -0.15,-0.12,  0.15, 0.35, -0.16, 0.0, 0.0
+           0.25, 0.05, -0.11, 0.35, -0.16, 0.0, 0.08,
+          -0.25,-0.05,  0.11, 0.35, -0.16, 0.0, 0.08
         ]
         target_feet_height = 0.03
         target_feet_height_max = 0.06
         feet_to_ankle_distance = 0.041
         cycle_time = 1.0
         # if true negative total rewards are clipped at zero (avoids early termination problems)
-        only_positive_rewards = False
+        only_positive_rewards = True
         # tracking reward = exp(-error*sigma)
         tracking_sigma = 5 
         max_contact_force = 700  # forces above this value are penalized
         
         class scales:
-            ref_joint_pos = 1.5
-            feet_clearance = 3.0
+            ref_joint_pos = 2.2
+            feet_clearance = 1.2
             feet_contact_number = 2.0
             # gait
-            feet_air_time = 3.0
+            feet_air_time = 1.4
             foot_slip = -0.1
             # 奖励权重，较大，横向姿态发散。较小，双脚太近，交叉步。
             feet_distance = 0.2
@@ -360,26 +359,25 @@ class X1DHStandShoulderCfg(LeggedRobotCfg):
             # contact 
             feet_contact_forces = -0.01
             # vel tracking
-            tracking_lin_vel = 1.5
+            tracking_lin_vel = 1.8
             tracking_ang_vel = 1.1
             vel_mismatch_exp = 0.5 # lin_z; ang x,y
-            low_speed = 0.3
+            low_speed = 0.2
             track_vel_hard = 0.5
             # base pos
-            default_joint_pos = 0.3
+            default_joint_pos = 1
             orientation = 1.
             feet_rotation = 0.3
             base_height = 0.2
             base_acc = 0.2
             # energy
             action_smoothness = -0.002
-            hip_yaw_action = -0.0005
-            shoulder_action = -0.003
+
             torques = -8e-9
             dof_vel = -2e-8
             dof_acc = -1e-7
             collision = -1.
-            stand_still = 1.0
+            stand_still = 2.5
             # limits
             dof_vel_limits = -1
             dof_pos_limits = -10.
@@ -430,7 +428,7 @@ class X1DHStandShoulderCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = 'ActorCriticDH'
         algorithm_class_name = 'DHPPO'
         num_steps_per_env = 24  # per iteration
-        max_iterations = 15000  # number of policy updates
+        max_iterations = 20000  # number of policy updates
         
         # logging
         save_interval = 100  # check for potential saves every this many iterations
